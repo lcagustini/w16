@@ -29,7 +29,6 @@ void loadRAM(int16_t *ram){
 }
 
 /*
- * (^[a-zA-Z_][a-zA-Z0-9_]+[:])|(HALT|ADD *r[0-9] *r[0-9]|SUB *r[0-9] *r[0-9]|MUL *r[0-9] *r[0-9]|DIV *r[0-9] *r[0-9]|OR *r[0-9] *r[0-9]|AND *r[0-9] *r[0-9]|NOT *r[0-9]|LOAD )
  * 01 - HALT
  * 02 - ADD
  * 03 - SUB
