@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <regex.h>
+#include <string.h>
 
 int16_t output[62000];
 
@@ -59,8 +60,9 @@ void processInstruction(char *line, Label *labels, int labelSize, int *memory, i
     int j;
 
     while(line[(*i)++] == ' ');
+    (*i)--;
 
-    while(line[*i] != ' '){
+    while(line[*i] != ' ' && line[*i] != '\0'){
         inst[j] = line[*i];
         (*i)++;
         j++;
@@ -70,10 +72,14 @@ void processInstruction(char *line, Label *labels, int labelSize, int *memory, i
 
     if(!strcmp(inst, "LOAD")){
         while(line[(*i)++] != 'r');
+        (*i)--;
         int r = line[++(*i)] - '0';
+        (*i)++;
 
         while(line[(*i)++] == ' ');
+        (*i)--;
         if(line[*i] == '['){
+            (*i)++;
             output[(*memory)++] = 0x0009 | (r << 8);
             char *rot = malloc(64*sizeof(char));
             j = 0;
@@ -143,13 +149,20 @@ int main(int argc, char **argv){
             if(match(line, &linePattern)){
                 if(match(line, &labelPattern))
                     processLabel(line, labels, &labelSize, memoryLocation, &i);
-                if(match(line, &instructionPattern))
-                    processInstruction(line, labels, labelSize, &memoryLocation, &i);
             }
             else
                 printf("Syntax error on line %d\n", lineNumber);
 
-            memoryLocation++;
+            lineNumber++;
+        }
+
+        fseek(input, 0, SEEK_SET);
+        lineNumber = 1;
+        memoryLocation = 0;
+        while(getLine(&line, input)){
+            i = 0;
+            if(match(line, &instructionPattern))
+                processInstruction(line, labels, labelSize, &memoryLocation, &i);
             lineNumber++;
         }
     }
