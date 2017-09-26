@@ -8,7 +8,40 @@ void printRegisters(int16_t r[], int16_t sr, int16_t pc){
     printf("pc: %d\n\n", pc);
 }
 
-void loadRAM(int16_t *ram){
+int getLine(char **line, FILE *input){
+    int i, cur;
+
+    *line = malloc(128*sizeof(char));
+
+    i = 0;
+    while((cur = fgetc(input)) != '\n' && cur != EOF)
+        (*line)[i++] = cur;
+
+    (*line)[i] = '\0';
+
+    if(cur == EOF)
+        return 0;
+    return 1;
+}
+
+void loadRAM(char *path, int16_t *ram){
+    FILE *input;
+    int lineNumber = 0;
+
+    if(path != NULL){
+        input = fopen(path, "r");
+        if(!input)
+            printf("Error opening file");
+        else{
+            while(getLine(&line, input))
+                ram[lineNumber++] = (int16_t)strtol(num, NULL, 0);
+            fclose(input);
+        }
+    }
+    else
+        printf("No file found");
+
+    /*
     ram[0] = 0x0009 | 0x0000 | 0x0000;
     ram[1] = 0x000A;
 
@@ -26,6 +59,7 @@ void loadRAM(int16_t *ram){
 
     ram[10] = 13;
     ram[11] = 39;
+    */
 }
 
 /*
@@ -44,12 +78,12 @@ void loadRAM(int16_t *ram){
  * 0D - JUMP
  * */
 
-int main(){
+int main(int argc, char **argv){
     int16_t *ram = malloc(62000);
     int16_t r[10] = {};
     int16_t sr = 0;
 
-    loadRAM(ram);
+    loadRAM(argv[1], ram);
 
     int16_t pc = 0;
     while(1){
