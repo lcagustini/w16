@@ -3,7 +3,7 @@
 #include <regex.h>
 #include <string.h>
 
-#define RAM_SIZE 20
+#define RAM_SIZE 62000
 
 int16_t output[RAM_SIZE];
 
@@ -18,14 +18,19 @@ void printLabels(Label labels[], int labelSize){
         printf("%s: %d\n", labels[i].name, labels[i].memory);
 }
 
-void printOutput(FILE *output){
-    if(!output){
+void printOutput(char *path){
+    if(!path){
         printf("Output: \n");
-        for(int i = 0; i < RAM_SIZE; i++)
+        for(int i = 0; i < RAM_SIZE && output[i]; i++)
             printf("%2d: 0x%04x\n", i, output[i]);
     }
     else{
+        FILE *out = fopen(path, "w");
 
+        for(int i = 0; i < RAM_SIZE && output[i]; i++)
+            fprintf(out, "%04x", output[i]);
+
+        fclose(out);
     }
 }
 
@@ -85,7 +90,6 @@ void processLabel(char *line, Label *labels, int *labelSize, int memoryLocation,
     }
 
     num[j] = '\0';
-    printf("n: %s\n", num);
 
     output[memoryLocation] = (int16_t)strtol(num, NULL, 0);
 
@@ -156,6 +160,35 @@ void processInstruction(char *line, Label *labels, int labelSize, int *memory, i
             output[(*memory)++] = (int16_t)strtol(num, NULL, 0);
         }
     }
+    else if(!strcmp(inst, "SAVE")){
+        while(line[(*i)++] != 'r');
+        (*i)--;
+        int r = line[++(*i)] - '0';
+        (*i)++;
+
+        while(line[(*i)++] == ' ');
+
+        output[(*memory)++] = 0x000A | (r << 8);
+        char *rot = malloc(64*sizeof(char));
+        j = 0;
+
+        while(line[*i] != ']'){
+            rot[j] = line[*i];
+            (*i)++;
+            j++;
+        }
+
+        rot[j] = '\0';
+
+        for(j = 0; j < labelSize; j++){
+            if(!strcmp(labels[j].name, rot)){
+                output[(*memory)++] = labels[j].memory;
+                break;
+            }
+        }
+        if(j == labelSize)
+            printf("Label not found");
+    }
     else if(!strcmp(inst, "ADD")){
         while(line[(*i)++] != 'r');
         (*i)--;
@@ -167,7 +200,106 @@ void processInstruction(char *line, Label *labels, int labelSize, int *memory, i
         int16_t r2 = line[++(*i)] - '0';
         (*i)++;
 
-        output[(*memory)++] = 0x0002 | r1 | r2;
+        output[(*memory)++] = 0x0002 | (r1 << 8) | (r2 << 12);
+    }
+    else if(!strcmp(inst, "SUB")){
+        while(line[(*i)++] != 'r');
+        (*i)--;
+        int16_t r1 = line[++(*i)] - '0';
+        (*i)++;
+
+        while(line[(*i)++] != 'r');
+        (*i)--;
+        int16_t r2 = line[++(*i)] - '0';
+        (*i)++;
+
+        output[(*memory)++] = 0x0003 | (r1 << 8) | (r2 << 12);
+    }
+    else if(!strcmp(inst, "MUL")){
+        while(line[(*i)++] != 'r');
+        (*i)--;
+        int16_t r1 = line[++(*i)] - '0';
+        (*i)++;
+
+        while(line[(*i)++] != 'r');
+        (*i)--;
+        int16_t r2 = line[++(*i)] - '0';
+        (*i)++;
+
+        output[(*memory)++] = 0x0004 | (r1 << 8) | (r2 << 12);
+    }
+    else if(!strcmp(inst, "DIV")){
+        while(line[(*i)++] != 'r');
+        (*i)--;
+        int16_t r1 = line[++(*i)] - '0';
+        (*i)++;
+
+        while(line[(*i)++] != 'r');
+        (*i)--;
+        int16_t r2 = line[++(*i)] - '0';
+        (*i)++;
+
+        output[(*memory)++] = 0x0005 | (r1 << 8) | (r2 << 12);
+    }
+    else if(!strcmp(inst, "OR")){
+        while(line[(*i)++] != 'r');
+        (*i)--;
+        int16_t r1 = line[++(*i)] - '0';
+        (*i)++;
+
+        while(line[(*i)++] != 'r');
+        (*i)--;
+        int16_t r2 = line[++(*i)] - '0';
+        (*i)++;
+
+        output[(*memory)++] = 0x0006 | (r1 << 8) | (r2 << 12);
+    }
+    else if(!strcmp(inst, "AND")){
+        while(line[(*i)++] != 'r');
+        (*i)--;
+        int16_t r1 = line[++(*i)] - '0';
+        (*i)++;
+
+        while(line[(*i)++] != 'r');
+        (*i)--;
+        int16_t r2 = line[++(*i)] - '0';
+        (*i)++;
+
+        output[(*memory)++] = 0x0007 | (r1 << 8) | (r2 << 12);
+    }
+    else if(!strcmp(inst, "NOT")){
+        while(line[(*i)++] != 'r');
+        (*i)--;
+        int16_t r = line[++(*i)] - '0';
+        (*i)++;
+
+        output[(*memory)++] = 0x0008 | (r << 8);
+    }
+    else if(!strcmp(inst, "COPY")){
+        while(line[(*i)++] != 'r');
+        (*i)--;
+        int16_t r1 = line[++(*i)] - '0';
+        (*i)++;
+
+        while(line[(*i)++] != 'r');
+        (*i)--;
+        int16_t r2 = line[++(*i)] - '0';
+        (*i)++;
+
+        output[(*memory)++] = 0x000B | (r1 << 8) | (r2 << 12);
+    }
+    else if(!strcmp(inst, "TEST")){
+        while(line[(*i)++] != 'r');
+        (*i)--;
+        int16_t r1 = line[++(*i)] - '0';
+        (*i)++;
+
+        while(line[(*i)++] != 'r');
+        (*i)--;
+        int16_t r2 = line[++(*i)] - '0';
+        (*i)++;
+
+        output[(*memory)++] = 0x000C | (r1 << 8) | (r2 << 12);
     }
     else if(!strcmp(inst, "HALT")){
         output[(*memory)++] = 1;
@@ -190,7 +322,7 @@ int main(int argc, char **argv){
     if(regcomp(&memoryPattern, "(LOAD|SAVE|JUMP)", REG_EXTENDED))
         printf("Memory RegEx error");
 
-    if(argv[1] != NULL){
+    if(argv[1]){
         input = fopen(argv[1], "r");
         if(!input)
             printf("Error opening file");
@@ -228,7 +360,7 @@ int main(int argc, char **argv){
             }
 
             printLabels(labels, labelSize);
-            printOutput();
+            printOutput(argv[2]);
         }
     }
     else

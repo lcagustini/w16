@@ -3,5 +3,5 @@ LOAD r1 [data2]
 ADD r1 r0
 HALT
 
-data1: 0x0013
-data2: 0x0029
+data1: 0x0001
+data2: 0x0002
