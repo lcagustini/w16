@@ -1,7 +1,8 @@
-LOAD r0 [data1]
-LOAD r1 [data2]
-ADD r1 r0
-HALT
+n: 0x2
 
-data1: 0x0001
-data2: 0x0002
+COPY r0 0x1
+COPY r1 0x0
+LOAD r2 [n]
+
+TEST r1 r2
+

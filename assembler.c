@@ -99,7 +99,7 @@ void processLabel(char *line, Label *labels, int *labelSize, int memoryLocation,
 
 void processInstruction(char *line, Label *labels, int labelSize, int *memory, int *i){
     char *inst = malloc(8*sizeof(char));
-    int j;
+    int j = 0;
 
     while(line[(*i)++] == ' ');
     (*i)--;
@@ -281,12 +281,31 @@ void processInstruction(char *line, Label *labels, int labelSize, int *memory, i
         int16_t r1 = line[++(*i)] - '0';
         (*i)++;
 
-        while(line[(*i)++] != 'r');
+        while(line[(*i)++] == ' ');
         (*i)--;
-        int16_t r2 = line[++(*i)] - '0';
-        (*i)++;
 
-        output[(*memory)++] = 0x000B | (r1 << 8) | (r2 << 12);
+        if(line[*i] == 'r'){
+            int16_t r2 = line[++(*i)] - '0';
+            (*i)++;
+
+            output[(*memory)++] = 0x000B | (r1 << 8) | (r2 << 12);
+        }
+        else{
+            char *num = malloc(8*sizeof(char));
+            j = 0;
+
+            while(line[*i] != ' ' && line[*i] != '#' && line[*i] != '\0'){
+                num[j] = line[*i];
+                (*i)++;
+                j++;
+            }
+
+            num[j] = '\0';
+
+            int8_t r2 = (int8_t)strtol(num, NULL, 0);
+
+            output[(*memory)++] = 0x000B | (r1 << 8) | (r2 << 12);
+        }
     }
     else if(!strcmp(inst, "TEST")){
         while(line[(*i)++] != 'r');
@@ -301,6 +320,59 @@ void processInstruction(char *line, Label *labels, int labelSize, int *memory, i
 
         output[(*memory)++] = 0x000C | (r1 << 8) | (r2 << 12);
     }
+    else if(!strcmp(inst, "LOAD")){
+        int r = 0;
+
+        while(line[(*i)++] == ' ');
+        (*i)--;
+
+        if(line[*i] == 'L')
+            r = 0x0001;
+        else if(line[*i] == 'E')
+            r = 0x0002;
+        else
+            r = 0x0004;
+
+        if(line[*i] == '['){
+            (*i)++;
+            output[(*memory)++] = 0x000D | (r << 8);
+            char *rot = malloc(64*sizeof(char));
+            j = 0;
+
+            while(line[*i] != ']'){
+                rot[j] = line[*i];
+                (*i)++;
+                j++;
+            }
+
+            rot[j] = '\0';
+
+            for(j = 0; j < labelSize; j++){
+                if(!strcmp(labels[j].name, rot)){
+                    output[(*memory)++] = labels[j].memory;
+                    break;
+                }
+            }
+            if(j == labelSize)
+                printf("Label not found");
+        }
+        else{
+            output[(*memory)++] = 0x000D | (r << 8) | 0x1000;
+
+            char *num = malloc(8*sizeof(char));
+            j = 0;
+
+            while(line[*i] != ' ' && line[*i] != '#' && line[*i] != '\0'){
+                num[j] = line[*i];
+                (*i)++;
+                j++;
+            }
+
+            num[j] = '\0';
+
+            output[(*memory)++] = (int16_t)strtol(num, NULL, 0);
+        }
+    }
     else if(!strcmp(inst, "HALT")){
         output[(*memory)++] = 1;
     }
@@ -313,11 +385,11 @@ int main(int argc, char **argv){
     int i, lineNumber, memoryLocation, labelSize;
     Label labels[1024];
 
-    if(regcomp(&linePattern, "(^([a-zA-Z_][a-zA-Z0-9_]*[:]){0,1} *(((HALT)|(ADD *r[0-9] *r[0-9])|(SUB *r[0-9] *r[0-9])|(MUL *r[0-9] *r[0-9])|(DIV *r[0-9] *r[0-9])|(OR *r[0-9] *r[0-9])|(AND *r[0-9] *r[0-9])|(NOT *r[0-9])|(LOAD *r[0-9] *((\\[[a-zA-Z_][a-zA-Z0-9_]*\\])|(0x[0-9A-Fa-f]+)))|(SAVE *r[0-9] *\\[0x[0-9A-Fa-f]+\\])|(COPY *r[0-9] *r[0-9])|(TEST *r[0-9] *r[0-9])|(JUMP *(N|Z|U) *((\\[[a-zA-Z_][a-zA-Z0-9_]*\\])|(0x[0-9A-Fa-f]+))))|(0x[0-9A-Za-z]+)){0,1}(#.*){0,1}$)", REG_EXTENDED))
+    if(regcomp(&linePattern, "(^([a-zA-Z_][a-zA-Z0-9_]*[:]){0,1} *(((HALT)|(ADD *r[0-9] *r[0-9])|(SUB *r[0-9] *r[0-9])|(MUL *r[0-9] *r[0-9])|(DIV *r[0-9] *r[0-9])|(OR *r[0-9] *r[0-9])|(AND *r[0-9] *r[0-9])|(NOT *r[0-9])|(LOAD *r[0-9] *((\\[[a-zA-Z_][a-zA-Z0-9_]*\\])|(0x[0-9A-Fa-f]+)))|(SAVE *r[0-9] *\\[0x[0-9A-Fa-f]+\\])|(COPY *r[0-9] *((r[0-9])|(0x[0-9A-Fa-f]+)))|(TEST *r[0-9] *r[0-9])|(JUMP *(N|Z|U) *((\\[[a-zA-Z_][a-zA-Z0-9_]*\\])|(0x[0-9A-Fa-f]+))))|(0x[0-9A-Za-z]+)){0,1}(#.*){0,1}$)", REG_EXTENDED))
         printf("Line RegEx error");
     if(regcomp(&labelPattern, "[a-zA-Z_][a-zA-Z0-9_]*[:]", REG_EXTENDED))
         printf("Label RegEx error");
-    if(regcomp(&instructionPattern, "((HALT)|(ADD *r[0-9] *r[0-9])|(SUB *r[0-9] *r[0-9])|(MUL *r[0-9] *r[0-9])|(DIV *r[0-9] *r[0-9])|(OR *r[0-9] *r[0-9])|(AND *r[0-9] *r[0-9])|(NOT *r[0-9])|(LOAD *r[0-9] *((\\[[a-zA-Z_][a-zA-Z0-9_]*\\])|(0x[0-9A-Fa-f]+)))|(SAVE *r[0-9] *\\[0x[0-9A-Fa-f]+\\])|(COPY *r[0-9] *r[0-9])|(TEST *r[0-9] *r[0-9])|(JUMP *(N|Z|U) *((\\[[a-zA-Z_][a-zA-Z0-9_]*\\])|(0x[0-9A-Fa-f]+))))", REG_EXTENDED))
+    if(regcomp(&instructionPattern, "((HALT)|(ADD *r[0-9] *r[0-9])|(SUB *r[0-9] *r[0-9])|(MUL *r[0-9] *r[0-9])|(DIV *r[0-9] *r[0-9])|(OR *r[0-9] *r[0-9])|(AND *r[0-9] *r[0-9])|(NOT *r[0-9])|(LOAD *r[0-9] *((\\[[a-zA-Z_][a-zA-Z0-9_]*\\])|(0x[0-9A-Fa-f]+)))|(SAVE *r[0-9] *\\[0x[0-9A-Fa-f]+\\])|(COPY *r[0-9] *((r[0-9])|(0x[0-9A-Fa-f]+)))|(TEST *r[0-9] *r[0-9])|(JUMP *(LT|EQ|GT) *((\\[[a-zA-Z_][a-zA-Z0-9_]*\\])|(0x[0-9A-Fa-f]+))))", REG_EXTENDED))
         printf("Instruction RegEx error");
     if(regcomp(&memoryPattern, "(LOAD|SAVE|JUMP)", REG_EXTENDED))
         printf("Memory RegEx error");

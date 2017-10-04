@@ -102,11 +102,16 @@ int main(int argc, char **argv){
         }
         else if(inst == 0x000A)
             ram[ram[++pc]] = r[ir1];
-        else if(inst == 0x000B)
-            r[ir1] = r[ir2];
+        else if(inst == 0x000B){
+            if(ir2 > 9)
+                r[ir1] = ir2;
+            else
+                r[ir1] = r[ir2];
+        }
         else if(inst == 0x000C){
-            if(r[ir1] - r[ir2] == 0) sr |= 0x0001;
-            if(r[ir1] - r[ir2] < 0) sr |= 0x0002;
+            if(r[ir1] - r[ir2] == 0) sr = 0x0001;
+            else if(r[ir1] - r[ir2] < 0) sr = 0x0002;
+            else sr = 0x0004;
         }
         else if(inst == 0x000D){
             pc++;
