@@ -99,7 +99,7 @@ void processLabel(char *line, Label *labels, int *labelSize, int memoryLocation,
 
 void processInstruction(char *line, Label *labels, int labelSize, int *memory, int *i){
     char *inst = malloc(8*sizeof(char));
-    int j;
+    int j = 0;
 
     while(line[(*i)++] == ' ');
     (*i)--;
