@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#define RAM_SIZE 30
+
 void printRegisters(int16_t r[], int16_t sr, int16_t pc){
     for(int i = 0; i < 10; i++)
         printf("r%d: %d\n", i, r[i]);
@@ -19,8 +21,10 @@ void loadRAM(char *path, int16_t *ram){
             printf("Error opening file");
         else{
             int16_t inst;
-            while(!feof(input) && fscanf(input, "%4hx", &inst))
+            while(!feof(input) && fscanf(input, "%4hx", &inst)){
                 ram[lineNumber++] = inst;
+                printf("%d - %x\n", lineNumber-1, inst);
+            }
             fclose(input);
         }
     }
@@ -65,7 +69,7 @@ void loadRAM(char *path, int16_t *ram){
  * */
 
 int main(int argc, char **argv){
-    int16_t *ram = malloc(62000);
+    int16_t ram[RAM_SIZE] = {};
     int16_t r[10] = {};
     int16_t sr = 0;
 
@@ -124,7 +128,7 @@ int main(int argc, char **argv){
             pc--;
         }
 
-        printRegisters(r, sr, pc);
+        //printRegisters(r, sr, pc);
 
         pc++;
     }

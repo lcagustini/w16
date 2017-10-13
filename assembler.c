@@ -3,7 +3,7 @@
 #include <regex.h>
 #include <string.h>
 
-#define RAM_SIZE 62000
+#define RAM_SIZE 30
 
 int16_t output[RAM_SIZE];
 
@@ -21,13 +21,13 @@ void printLabels(Label labels[], int labelSize){
 void printOutput(char *path){
     if(!path){
         printf("Output: \n");
-        for(int i = 0; i < RAM_SIZE && output[i]; i++)
+        for(int i = 0; i < RAM_SIZE; i++)
             printf("%2d: 0x%04x\n", i, output[i]);
     }
     else{
         FILE *out = fopen(path, "w");
 
-        for(int i = 0; i < RAM_SIZE && output[i]; i++)
+        for(int i = 0; i < RAM_SIZE; i++)
             fprintf(out, "%04x", output[i]);
 
         fclose(out);
@@ -91,7 +91,10 @@ void processLabel(char *line, Label *labels, int *labelSize, int memoryLocation,
 
     num[j] = '\0';
 
-    output[memoryLocation] = (int16_t)strtol(num, NULL, 0);
+
+    if(num[0]){
+        output[memoryLocation] = (int16_t)strtol(num, NULL, 0);
+    }
 
     labels[*labelSize] = label;
     (*labelSize)++;
@@ -320,7 +323,7 @@ void processInstruction(char *line, Label *labels, int labelSize, int *memory, i
 
         output[(*memory)++] = 0x000C | (r1 << 8) | (r2 << 12);
     }
-    else if(!strcmp(inst, "LOAD")){
+    else if(!strcmp(inst, "JUMP")){
         int r = 0;
 
         while(line[(*i)++] == ' ');
@@ -330,8 +333,10 @@ void processInstruction(char *line, Label *labels, int labelSize, int *memory, i
             r = 0x0001;
         else if(line[*i] == 'E')
             r = 0x0002;
-        else
+        else if(line[*i] == 'G')
             r = 0x0004;
+        else
+            r = 0x0000;
 
         if(line[*i] == '['){
             (*i)++;
@@ -385,11 +390,11 @@ int main(int argc, char **argv){
     int i, lineNumber, memoryLocation, labelSize;
     Label labels[1024];
 
-    if(regcomp(&linePattern, "(^([a-zA-Z_][a-zA-Z0-9_]*[:]){0,1} *(((HALT)|(ADD *r[0-9] *r[0-9])|(SUB *r[0-9] *r[0-9])|(MUL *r[0-9] *r[0-9])|(DIV *r[0-9] *r[0-9])|(OR *r[0-9] *r[0-9])|(AND *r[0-9] *r[0-9])|(NOT *r[0-9])|(LOAD *r[0-9] *((\\[[a-zA-Z_][a-zA-Z0-9_]*\\])|(0x[0-9A-Fa-f]+)))|(SAVE *r[0-9] *\\[0x[0-9A-Fa-f]+\\])|(COPY *r[0-9] *((r[0-9])|(0x[0-9A-Fa-f]+)))|(TEST *r[0-9] *r[0-9])|(JUMP *(N|Z|U) *((\\[[a-zA-Z_][a-zA-Z0-9_]*\\])|(0x[0-9A-Fa-f]+))))|(0x[0-9A-Za-z]+)){0,1}(#.*){0,1}$)", REG_EXTENDED))
+    if(regcomp(&linePattern, "(^([a-zA-Z_][a-zA-Z0-9_]*[:]){0,1} *(((HALT)|(ADD *r[0-9] *r[0-9])|(SUB *r[0-9] *r[0-9])|(MUL *r[0-9] *r[0-9])|(DIV *r[0-9] *r[0-9])|(OR *r[0-9] *r[0-9])|(AND *r[0-9] *r[0-9])|(NOT *r[0-9])|(LOAD *r[0-9] *((\\[[a-zA-Z_][a-zA-Z0-9_]*\\])|(0x[0-9A-Fa-f]+)))|(SAVE *r[0-9] *\\[0x[0-9A-Fa-f]+\\])|(COPY *r[0-9] *((r[0-9])|(0x[0-9A-Fa-f]+)))|(TEST *r[0-9] *r[0-9])|(JUMP *(LT|EQ|GT)? *((\\[[a-zA-Z_][a-zA-Z0-9_]*\\])|(0x[0-9A-Fa-f]+))))|(0x[0-9A-Za-z]+)){0,1}(#.*){0,1}$)", REG_EXTENDED))
         printf("Line RegEx error");
     if(regcomp(&labelPattern, "[a-zA-Z_][a-zA-Z0-9_]*[:]", REG_EXTENDED))
         printf("Label RegEx error");
-    if(regcomp(&instructionPattern, "((HALT)|(ADD *r[0-9] *r[0-9])|(SUB *r[0-9] *r[0-9])|(MUL *r[0-9] *r[0-9])|(DIV *r[0-9] *r[0-9])|(OR *r[0-9] *r[0-9])|(AND *r[0-9] *r[0-9])|(NOT *r[0-9])|(LOAD *r[0-9] *((\\[[a-zA-Z_][a-zA-Z0-9_]*\\])|(0x[0-9A-Fa-f]+)))|(SAVE *r[0-9] *\\[0x[0-9A-Fa-f]+\\])|(COPY *r[0-9] *((r[0-9])|(0x[0-9A-Fa-f]+)))|(TEST *r[0-9] *r[0-9])|(JUMP *(LT|EQ|GT) *((\\[[a-zA-Z_][a-zA-Z0-9_]*\\])|(0x[0-9A-Fa-f]+))))", REG_EXTENDED))
+    if(regcomp(&instructionPattern, "((HALT)|(ADD *r[0-9] *r[0-9])|(SUB *r[0-9] *r[0-9])|(MUL *r[0-9] *r[0-9])|(DIV *r[0-9] *r[0-9])|(OR *r[0-9] *r[0-9])|(AND *r[0-9] *r[0-9])|(NOT *r[0-9])|(LOAD *r[0-9] *((\\[[a-zA-Z_][a-zA-Z0-9_]*\\])|(0x[0-9A-Fa-f]+)))|(SAVE *r[0-9] *\\[0x[0-9A-Fa-f]+\\])|(COPY *r[0-9] *((r[0-9])|(0x[0-9A-Fa-f]+)))|(TEST *r[0-9] *r[0-9])|(JUMP *(LT|EQ|GT)? *((\\[[a-zA-Z_][a-zA-Z0-9_]*\\])|(0x[0-9A-Fa-f]+))))", REG_EXTENDED))
         printf("Instruction RegEx error");
     if(regcomp(&memoryPattern, "(LOAD|SAVE|JUMP)", REG_EXTENDED))
         printf("Memory RegEx error");
