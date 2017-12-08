@@ -72,7 +72,7 @@ void processLabel(char *line, Label *labels, int *labelSize, int memoryLocation,
 
     for(j = 0; j < *labelSize; j++){
         if(!strcmp(label.name, labels[j].name))
-            printf("Multiple labels with same name");
+            printf("Multiple labels with same name\n");
     }
 
     char *num = malloc(8*sizeof(char));
@@ -144,7 +144,7 @@ void processInstruction(char *line, Label *labels, int labelSize, int *memory, i
                 }
             }
             if(j == labelSize)
-                printf("Label not found");
+                printf("Label not found\n");
         }
         else{
             output[(*memory)++] = 0x0009 | (r << 8) | 0x1000;
@@ -190,7 +190,7 @@ void processInstruction(char *line, Label *labels, int labelSize, int *memory, i
             }
         }
         if(j == labelSize)
-            printf("Label not found");
+            printf("Label not found\n");
     }
     else if(!strcmp(inst, "ADD")){
         while(line[(*i)++] != 'r');
@@ -323,24 +323,73 @@ void processInstruction(char *line, Label *labels, int labelSize, int *memory, i
 
         output[(*memory)++] = 0x000C | (r1 << 8) | (r2 << 12);
     }
+    else if(!strcmp(inst, "POP")){
+        while(line[(*i)++] == ' ');
+        (*i)--;
+
+        if(line[*i] == 'r'){
+            int s = line[++(*i)] - '0';
+            if(line[++(*i)] == '-'){
+                int f = line[*i+2] - '0';
+                for(int j = s; j <= f; j++){
+                    char reg[1] = {j+'0'};
+                    char inst[80] = "LOAD r";
+                    strcat(inst, reg);
+                    strcat(inst, " [r13]");
+
+                    *i = 0;
+                    processInstruction("SUB r13 1", labels, labelSize, memory, i);
+                    *i = 0;
+                    processInstruction(inst, labels, labelSize, memory, i);
+                }
+            }
+            else{
+                
+            }
+        }
+        else{
+            if(line[*i] == 'l'){
+            }
+            else if(line[*i] == 'p'){
+            }
+            else{
+                (*i)++;
+                if(line[*i] == 'r'){
+                }
+                else{
+                }
+            }
+        }
+    }
+    else if(!strcmp(inst, "PUSH")){
+    }
     else if(!strcmp(inst, "JUMP")){
         int r = 0;
 
         while(line[(*i)++] == ' ');
         (*i)--;
 
-        if(line[*i] == 'L')
-            r = 0x0001;
-        else if(line[*i] == 'E')
+        if(line[*i] == 'L'){
             r = 0x0002;
-        else if(line[*i] == 'G')
+            (*i) += 2;
+        }
+        else if(line[*i] == 'E'){
+            r = 0x0001;
+            (*i) += 2;
+        }
+        else if(line[*i] == 'G'){
             r = 0x0004;
+            (*i) += 2;
+        }
         else
             r = 0x0000;
 
+        while(line[(*i)++] == ' ');
+        (*i)--;
+
+        output[(*memory)++] = 0x000D | (r << 8);
         if(line[*i] == '['){
             (*i)++;
-            output[(*memory)++] = 0x000D | (r << 8);
             char *rot = malloc(64*sizeof(char));
             j = 0;
 
@@ -359,11 +408,9 @@ void processInstruction(char *line, Label *labels, int labelSize, int *memory, i
                 }
             }
             if(j == labelSize)
-                printf("Label not found");
+                printf("Label not found\n");
         }
         else{
-            output[(*memory)++] = 0x000D | (r << 8) | 0x1000;
-
             char *num = malloc(8*sizeof(char));
             j = 0;
 
@@ -390,19 +437,19 @@ int main(int argc, char **argv){
     int i, lineNumber, memoryLocation, labelSize;
     Label labels[1024];
 
-    if(regcomp(&linePattern, "(^([a-zA-Z_][a-zA-Z0-9_]*[:]){0,1} *(((HALT)|(ADD *r[0-9] *r[0-9])|(SUB *r[0-9] *r[0-9])|(MUL *r[0-9] *r[0-9])|(DIV *r[0-9] *r[0-9])|(OR *r[0-9] *r[0-9])|(AND *r[0-9] *r[0-9])|(NOT *r[0-9])|(LOAD *r[0-9] *((\\[[a-zA-Z_][a-zA-Z0-9_]*\\])|(0x[0-9A-Fa-f]+)))|(SAVE *r[0-9] *\\[0x[0-9A-Fa-f]+\\])|(COPY *r[0-9] *((r[0-9])|(0x[0-9A-Fa-f]+)))|(TEST *r[0-9] *r[0-9])|(JUMP *(LT|EQ|GT)? *((\\[[a-zA-Z_][a-zA-Z0-9_]*\\])|(0x[0-9A-Fa-f]+))))|(0x[0-9A-Za-z]+)){0,1}(#.*){0,1}$)", REG_EXTENDED))
-        printf("Line RegEx error");
+    if(regcomp(&linePattern, "(^([a-zA-Z_][a-zA-Z0-9_]*[:])? *(((HALT)|(PUSH *((r[0-9](-r[0-9])?)|(lr)|(sp)|(sr)|(pc)))|(POP *((r[0-9](-r[0-9])?)|(lr)|(sp)|(sr)|(pc)))|(ADD *r[0-9] *r[0-9])|(SUB *r[0-9] *r[0-9])|(MUL *r[0-9] *r[0-9])|(DIV *r[0-9] *r[0-9])|(OR *r[0-9] *r[0-9])|(AND *r[0-9] *r[0-9])|(NOT *r[0-9])|(LOAD *r[0-9] *((\\[[a-zA-Z_][a-zA-Z0-9_]*\\])|(0x[0-9A-Fa-f]+)))|(SAVE *r[0-9] *\\[0x[0-9A-Fa-f]+\\])|(COPY *r[0-9] *r[0-9])|(TEST *r[0-9] *r[0-9])|(JUMP *(LT|EQ|GT)? *((\\[[a-zA-Z_][a-zA-Z0-9_]*\\])|(0x[0-9A-Fa-f]+))))|(0x[0-9A-Za-z]+))?(#.*)?$)", REG_EXTENDED))
+        printf("Line RegEx error\n");
     if(regcomp(&labelPattern, "[a-zA-Z_][a-zA-Z0-9_]*[:]", REG_EXTENDED))
-        printf("Label RegEx error");
-    if(regcomp(&instructionPattern, "((HALT)|(ADD *r[0-9] *r[0-9])|(SUB *r[0-9] *r[0-9])|(MUL *r[0-9] *r[0-9])|(DIV *r[0-9] *r[0-9])|(OR *r[0-9] *r[0-9])|(AND *r[0-9] *r[0-9])|(NOT *r[0-9])|(LOAD *r[0-9] *((\\[[a-zA-Z_][a-zA-Z0-9_]*\\])|(0x[0-9A-Fa-f]+)))|(SAVE *r[0-9] *\\[0x[0-9A-Fa-f]+\\])|(COPY *r[0-9] *((r[0-9])|(0x[0-9A-Fa-f]+)))|(TEST *r[0-9] *r[0-9])|(JUMP *(LT|EQ|GT)? *((\\[[a-zA-Z_][a-zA-Z0-9_]*\\])|(0x[0-9A-Fa-f]+))))", REG_EXTENDED))
-        printf("Instruction RegEx error");
+        printf("Label RegEx error\n");
+    if(regcomp(&instructionPattern, "((HALT)|(PUSH *((r[0-9](-r[0-9])?)|(lr)|(sp)|(sr)|(pc)))|(POP *((r[0-9](-r[0-9])?)|(lr)|(sp)|(sr)|(pc)))|(ADD *r[0-9] *r[0-9])|(SUB *r[0-9] *r[0-9])|(MUL *r[0-9] *r[0-9])|(DIV *r[0-9] *r[0-9])|(OR *r[0-9] *r[0-9])|(AND *r[0-9] *r[0-9])|(NOT *r[0-9])|(LOAD *r[0-9] *((\\[[a-zA-Z_][a-zA-Z0-9_]*\\])|(0x[0-9A-Fa-f]+)))|(SAVE *r[0-9] *\\[0x[0-9A-Fa-f]+\\])|(COPY *r[0-9] *r[0-9])|(TEST *r[0-9] *r[0-9])|(JUMP *(LT|EQ|GT)? *((\\[[a-zA-Z_][a-zA-Z0-9_]*\\])|(0x[0-9A-Fa-f]+))))", REG_EXTENDED))
+        printf("Instruction RegEx error\n");
     if(regcomp(&memoryPattern, "(LOAD|SAVE|JUMP)", REG_EXTENDED))
-        printf("Memory RegEx error");
+        printf("Memory RegEx error\n");
 
     if(argv[1]){
         input = fopen(argv[1], "r");
         if(!input)
-            printf("Error opening file");
+            printf("Error opening file\n");
         else{
             lineNumber = 1;
             memoryLocation = 0;
@@ -441,7 +488,7 @@ int main(int argc, char **argv){
         }
     }
     else
-        printf("No file found");
+        printf("No file found\n");
 
     return 0;
 }

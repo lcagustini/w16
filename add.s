@@ -1,14 +1,11 @@
-COPY r0 0x1
-COPY r1 0x0
-LOAD r2 [n]
-COPY r3 0x1
+LOAD r0 0x1
+LOAD r1 [n]
+LOAD r2 0x10
 
 loop:
 TEST r1 r2
 JUMP EQ [end]
-
-ADD r0 r0
-ADD r1 r3
+ADD r1 r0
 JUMP [loop]
 
 end:

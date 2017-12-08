@@ -1,13 +1,16 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 
 #define RAM_SIZE 30
 
-void printRegisters(int16_t r[], int16_t sr, int16_t pc){
+void printRegisters(int16_t r[]){
     for(int i = 0; i < 10; i++)
         printf("r%d: %d\n", i, r[i]);
-    printf("sr: %d\n", sr);
-    printf("pc: %d\n\n", pc);
+    printf("sr: %d\n", r[10]);
+    printf("pc: %d\n", r[11]);
+    printf("lr: %d\n", r[12]);
+    printf("sp: %d\n\n", r[13]);
 }
 
 void loadRAM(char *path, int16_t *ram){
@@ -70,14 +73,12 @@ void loadRAM(char *path, int16_t *ram){
 
 int main(int argc, char **argv){
     int16_t ram[RAM_SIZE] = {};
-    int16_t r[10] = {};
-    int16_t sr = 0;
+    int16_t r[14] = {}; /*r0-r9 + sr + pc + lr + sp*/
 
     loadRAM(argv[1], ram);
 
-    int16_t pc = 0;
     while(1){
-        int16_t cur = ram[pc];
+        int16_t cur = ram[r[11]];
         int16_t inst = cur & 0x00FF;
         int16_t ir1 = (cur & 0x0F00) >> 8;
         int16_t ir2 = (cur & 0xF000) >> 12;
@@ -100,37 +101,31 @@ int main(int argc, char **argv){
             r[ir1] = !r[ir1];
         else if(inst == 0x0009){
             if(!ir2)
-                r[ir1] = ram[ram[++pc]];
+                r[ir1] = ram[ram[++r[11]]];
             else
-                r[ir1] = ram[++pc];
+                r[ir1] = ram[++r[11]];
         }
         else if(inst == 0x000A)
-            ram[ram[++pc]] = r[ir1];
+            ram[ram[++r[11]]] = r[ir1];
         else if(inst == 0x000B){
-            if(ir2 > 9)
-                r[ir1] = ir2;
-            else
-                r[ir1] = r[ir2];
+            r[ir1] = r[ir2];
         }
         else if(inst == 0x000C){
-            if(r[ir1] - r[ir2] == 0) sr = 0x0001;
-            else if(r[ir1] - r[ir2] < 0) sr = 0x0002;
-            else sr = 0x0004;
+            if(r[ir1] - r[ir2] == 0) r[10] = 0x0001;
+            else if(r[ir1] - r[ir2] < 0) r[10] = 0x0002;
+            else r[10] = 0x0004;
         }
         else if(inst == 0x000D){
-            pc++;
-            if((sr & ir1) || (!ir1)){
-                if(!ir2)
-                    pc = ram[ram[pc]];
-                else
-                    pc = ram[pc];
+            r[11]++;
+            if((r[10] & ir1) || (!ir1)){
+                r[11] = ram[r[11]];
+                r[11] -= 2;
             }
-            pc--;
         }
 
-        //printRegisters(r, sr, pc);
+        printRegisters(r);
 
-        pc++;
+        r[11]++;
     }
 
     return 0;
